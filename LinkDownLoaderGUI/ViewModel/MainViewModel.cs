@@ -1,24 +1,18 @@
 using GalaSoft.MvvmLight;
+using LinkDownLoaderGUI.Model;
 
 namespace LinkDownLoaderGUI.ViewModel
 {
-    /// <summary>
-    /// This class contains properties that the main View can data bind to.
-    /// <para>
-    /// Use the <strong>mvvminpc</strong> snippet to add bindable properties to this ViewModel.
-    /// </para>
-    /// <para>
-    /// You can also use Blend to data bind with the tool's support.
-    /// </para>
-    /// <para>
-    /// See http://www.galasoft.ch/mvvm
-    /// </para>
-    /// </summary>
+
     public class MainViewModel : ViewModelBase
     {
-        /// <summary>
-        /// Initializes a new instance of the MainViewModel class.
-        /// </summary>
+        private DownloadOptions _downloadOptions;
+
+        public DownloadOptions DownloadOptions
+        {
+            get => _downloadOptions;
+            set => Set<DownloadOptions>(() => this.DownloadOptions, ref _downloadOptions, value);
+        }
         public MainViewModel()
         {
             ////if (IsInDesignMode)
