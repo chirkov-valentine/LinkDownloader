@@ -7,7 +7,7 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800"
         DataContext="{Binding Main, Source={StaticResource Locator}}">
-    <Grid>
+    <Grid Margin="7,0,-7,0">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"></ColumnDefinition>
             <ColumnDefinition Width="4*"></ColumnDefinition>
@@ -24,27 +24,35 @@
 
         </Grid.RowDefinitions>
         <Label Grid.Row="0" Grid.Column="0" Content="Страница Интернет:"></Label>
-        <TextBox Grid.Row="0" Grid.Column="1"></TextBox>
+        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding DownloadOptions.HttpAddress}"></TextBox>
 
         <Label Grid.Row="1" Grid.Column="0" Content="Сохранить в:"></Label>
-        <TextBox Grid.Row="1" Grid.Column="1"></TextBox>
+        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DownloadOptions.DownloadDirectory}"></TextBox>
         
         <Label Grid.Row="2" Grid.Column="0" Content="Маска файлов:"></Label>
-        <TextBox Grid.Row="2" Grid.Column="1"></TextBox>
+        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding DownloadOptions.Mask}"></TextBox>
         
         <Label Grid.Row="3" Grid.Column="0" Content="Кол-во потоков:"></Label>
         <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="1">
-            <TextBox Width="50">5</TextBox>
+            <TextBox Width="50" Text="{Binding DownloadOptions.ThreadCount}"></TextBox>
         </StackPanel>
 
         <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
-            <Button Margin="10 10 0 0">Скачать</Button>
+            <Button Margin="10 10 0 0" Command="{Binding GetLinksCommand}">Скачать</Button>
         </StackPanel>
 
         <Label Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2" Content="Журнал событий:"></Label>
-        <TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2"></TextBox>
+        <TextBox Grid.Row="6" Grid.Column="0" Grid.ColumnSpan="2" 
+                 TextWrapping="Wrap"
+                 IsReadOnly="True" 
+                 Text="{Binding LogText}"></TextBox>
 
-        <ProgressBar Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Right"></ProgressBar>
+        <ProgressBar Grid.Row="7" Grid.Column="0" Grid.ColumnSpan="2" 
+                     HorizontalAlignment="Right"
+                     Value="{Binding FileProceed}"
+                     Maximum="{Binding FilesCount}">
+            
+        </ProgressBar>
 
     </Grid>
 </Window>
