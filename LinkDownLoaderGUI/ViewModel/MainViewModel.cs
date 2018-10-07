@@ -82,12 +82,9 @@ namespace LinkDownLoaderGUI.ViewModel
         {
             DownloadOptions = new DownloadOptions
             {
-                HttpAddress = @"http://www.krishnapath.org/prabhupada-audio/",
-                DownloadDirectory = @"I:\Download",
-                Mask = @"*.zip",
                 ThreadCount = 5
             };
-            _fileLinks = new ConcurrentQueue<FileLink>();
+
             GetLinksCommand = new RelayCommand(
                 () => DownloadFilesAsync(DownloadOptions),
                 () => !Started,
@@ -100,12 +97,23 @@ namespace LinkDownLoaderGUI.ViewModel
 
             DispatcherHelper.Initialize();
             Started = false;
+            Clear();
         }
 
         private void CancelDownload()
         {
             _cts.Cancel();
             Started = false;
+        }
+
+        private void Clear()
+        {     
+            _cts = new CancellationTokenSource();
+            _token = _cts.Token;
+            _fileLinks = new ConcurrentQueue<FileLink>();
+            LogText = string.Empty;
+            FilesProceed = 0;
+            FilesCount = 0;
         }
 
         private void ShowOpenFolderDialog()
@@ -122,10 +130,9 @@ namespace LinkDownLoaderGUI.ViewModel
 
         private async void DownloadFilesAsync(DownloadOptions options)
         {
-            Started = true;
+            Clear();
 
-            _cts = new CancellationTokenSource();
-            _token = _cts.Token;
+            Started = true;
 
             await GetFileLinksAsync(options);
 
@@ -134,11 +141,7 @@ namespace LinkDownLoaderGUI.ViewModel
 
             FilesCount = _fileLinks.Count;
 
-            DispatcherHelper.CheckBeginInvokeOnUI(
-              () =>
-              {
-                  RemainFilesCount = string.Concat("Скачано: 0" + " из " + FilesCount, "\n");
-              });
+            RemainFilesCount = string.Concat("Скачано: 0" + " из " + FilesCount, "\n");
 
             var threadList = new List<Task>();
 
@@ -148,6 +151,9 @@ namespace LinkDownLoaderGUI.ViewModel
                     break;
                 threadList.Add(DowloadOneFileAsync(_token));
             }
+
+            if (threadList.Count == 0)
+                return;
 
             await Task.WhenAny(threadList);
 
@@ -170,11 +176,8 @@ namespace LinkDownLoaderGUI.ViewModel
 
             await Task.WhenAll(threadList);
 
-            DispatcherHelper.CheckBeginInvokeOnUI(
-             () =>
-             {
-                 RemainFilesCount = string.Concat("Скачано: "+ FilesProceed + " из " + FilesCount, ". Окончание закачки\n");
-             });
+            RemainFilesCount = string.Concat("Скачано: "+ FilesProceed + " из " + FilesCount, ". Окончание закачки\n");
+
             Started = false;
         }
 
@@ -231,7 +234,8 @@ namespace LinkDownLoaderGUI.ViewModel
                     ? Url.Combine(Url.GetRoot(options.HttpAddress), link.Attributes["href"].Value)
                     : link.Attributes["href"].Value;
 
-                if (FitsMask(fileName, options.Mask))
+                if (FitsMask(fileName, options.Mask) 
+                    && !_fileLinks.Any(p => p.LinkName.Equals(linkName, StringComparison.InvariantCultureIgnoreCase)))
                     _fileLinks.Enqueue(new FileLink
                     {
                         LinkName = linkName,
