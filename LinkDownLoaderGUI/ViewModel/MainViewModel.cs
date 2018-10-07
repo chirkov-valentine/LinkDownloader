@@ -225,7 +225,10 @@ namespace LinkDownLoaderGUI.ViewModel
         private async Task GetFileLinksAsync(DownloadOptions options)
         {
             HtmlWeb hw = new HtmlWeb();
-            var doc = await hw.LoadFromWebAsync(options.HttpAddress);
+            var doc = await hw.LoadFromWebAsync(options.HttpAddress, _token);
+
+            if (_token.IsCancellationRequested)
+                return;
 
             foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//a[@href]"))
             {
