@@ -10,5 +10,6 @@ namespace LinkDownLoaderGUI.Model
     {
         public string LinkName { get; set; }
         public string OutputName { get; set; }
+        public string OutputDirectory { get; set; }
     }
 }

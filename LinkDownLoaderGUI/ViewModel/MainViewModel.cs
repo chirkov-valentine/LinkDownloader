@@ -1,11 +1,17 @@
-using Flurl.Http;
+using Flurl;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
+using GalaSoft.MvvmLight.Threading;
 using HtmlAgilityPack;
 using LinkDownLoaderGUI.Model;
+using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Input;
 
@@ -18,6 +24,12 @@ namespace LinkDownLoaderGUI.ViewModel
         private string _logText;
         private int _filesProceed;
         private int _filesCount;
+        private ConcurrentQueue<FileLink> _fileLinks;
+        private string _remainFileCount;
+        private bool _started;
+
+        private CancellationTokenSource _cts;
+        private CancellationToken _token;
 
         public DownloadOptions DownloadOptions
         {
@@ -43,47 +55,161 @@ namespace LinkDownLoaderGUI.ViewModel
             set => Set<int>(() => this.FilesCount, ref _filesCount, value);
         }
 
-        public ICommand GetLinksCommand { get; private set; }
+        public string RemainFilesCount
+        {
+            get => _remainFileCount;
+            set => Set<string>(() => this.RemainFilesCount, ref _remainFileCount, value);
+        }
+
+        public RelayCommand GetLinksCommand { get; private set; }
+        public RelayCommand CancelCommand { get; private set; }
 
         public MainViewModel()
         {
             DownloadOptions = new DownloadOptions
             {
-                ThreadCount = 1
+                HttpAddress = @"http://www.krishnapath.org/prabhupada-audio/",
+                DownloadDirectory = @"I:\Download",
+                Mask = @"*.zip",
+                ThreadCount = 5
             };
-            GetLinksCommand = new RelayCommand(() => DownloadFilesAsync(DownloadOptions));
+            _fileLinks = new ConcurrentQueue<FileLink>();
+            _started = false;
+            GetLinksCommand = new RelayCommand(
+                () => DownloadFilesAsync(DownloadOptions),
+                () => !_started,
+                true);
+            CancelCommand = new RelayCommand(() => CancelDownload(),
+                () => _started,
+                true);
+            DispatcherHelper.Initialize();
+        }
+
+        private void CancelDownload()
+        {
+            _cts.Cancel();
+            _started = false;
+            GetLinksCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
         }
 
         private async void DownloadFilesAsync(DownloadOptions options)
         {
-            var list = await GetFileLinksAsync(options);
-            DowloadOneFileAsync(list[0]);
+            _started = true;
+
+            GetLinksCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
+
+            _cts = new CancellationTokenSource();
+            _token = _cts.Token;
+
+            await GetFileLinksAsync(options);
+
+            if (_fileLinks.IsEmpty)
+                return;
+
+            FilesCount = _fileLinks.Count;
+
+            DispatcherHelper.CheckBeginInvokeOnUI(
+              () =>
+              {
+                  RemainFilesCount = string.Concat("Скачано: 0" + " из " + FilesCount, "\n");
+              });
+
+            var threadList = new List<Task>();
+
+            for (int i = 0; i < DownloadOptions.ThreadCount && !_fileLinks.IsEmpty; i++)
+            {
+                if (_token.IsCancellationRequested)
+                    break;
+                threadList.Add(DowloadOneFileAsync(_token));
+            }
+
+            await Task.WhenAny(threadList);
+
+            var t = threadList.FirstOrDefault(p => p.IsCompleted);
+
+            threadList.Remove(t);
+
+            while (!_fileLinks.IsEmpty)
+            {
+                if (_token.IsCancellationRequested)
+                    break;
+                threadList.Add(DowloadOneFileAsync(_token));
+
+                await Task.WhenAny(threadList);
+
+                var task = threadList.FirstOrDefault(p => p.IsCompleted);
+
+                threadList.Remove(task);
+            }
+
+            await Task.WhenAll(threadList);
 
         }
 
-        private async void DowloadOneFileAsync(FileLink fileLink)
+        private async Task DowloadOneFileAsync(CancellationToken token)
         {
-            var path = await fileLink.LinkName.DownloadFileAsync(DownloadOptions.DownloadDirectory, fileLink.OutputName);
-            // увеличить progressBar
+            FileLink link;
+            _fileLinks.TryDequeue(out link);
+            WebClient wc = new WebClient();
+
+            if (token.IsCancellationRequested)
+            {
+                LogText = string.Concat(LogText, "Отмена", "\n");
+                return;
+            }
+            /* DispatcherHelper.CheckBeginInvokeOnUI(
+                 () =>
+                 {
+                     LogText = string.Concat(LogText, "Копирование: " + link.OutputName, "\n");
+                 });*/
+            try
+            {
+                await wc.DownloadFileTaskAsync(link.LinkName, Path.Combine(link.OutputDirectory, link.OutputName));
+            }
+            catch (Exception ex)
+            {
+                DispatcherHelper.CheckBeginInvokeOnUI(
+              () =>
+              {
+                  LogText = string.Concat(LogText, ex.Message, "\n");
+              });
+            }
+            
+            DispatcherHelper.CheckBeginInvokeOnUI(
+               () =>
+               {
+                   LogText = string.Concat(LogText, "Окончание: " + link.OutputName, "\n");
+               });
+            DispatcherHelper.CheckBeginInvokeOnUI(
+               () =>
+               {
+                   FilesProceed++;
+                   RemainFilesCount = string.Concat("Скачано: " + FilesProceed + " из " + FilesCount);
+               });
         }
 
-        private async Task<List<FileLink>> GetFileLinksAsync(DownloadOptions options)
+        private async Task GetFileLinksAsync(DownloadOptions options)
         {
             HtmlWeb hw = new HtmlWeb();
             var doc = await hw.LoadFromWebAsync(options.HttpAddress);
-
-            var result = new List<FileLink>();
+    
             foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//a[@href]"))
             {
                 var fileName = Path.GetFileName(link.Attributes["href"].Value);
+                var linkName = link.Attributes["href"].Value.StartsWith("/")
+                    ? Url.Combine(Url.GetRoot(options.HttpAddress), link.Attributes["href"].Value)
+                    : link.Attributes["href"].Value;
+
                 if (FitsMask(fileName, options.Mask))
-                    result.Add( new FileLink
+                    _fileLinks.Enqueue( new FileLink
                     {
-                        LinkName = link.Attributes["href"].Value,
-                        OutputName = fileName
+                        LinkName = linkName,
+                        OutputName = fileName,
+                        OutputDirectory = options.DownloadDirectory
                     });
             }
-            return result;
         }
 
         private bool FitsMask(string sFileName, string sFileMask)
