@@ -79,7 +79,8 @@
         <TextBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" 
                  TextWrapping="Wrap"
                  IsReadOnly="True"
-                 HorizontalScrollBarVisibility="Visible"
+                 VerticalScrollBarVisibility="Visible"
+                 HorizontalScrollBarVisibility="Disabled"
                  Text="{Binding LogText}"></TextBox>
 
         </Grid>
