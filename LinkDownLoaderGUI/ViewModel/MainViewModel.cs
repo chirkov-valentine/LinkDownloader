@@ -111,7 +111,8 @@ namespace LinkDownLoaderGUI.ViewModel
         private void ShowOpenFolderDialog()
         {
             var message = new OpenFolderMessage(
-                "All files (*.*)|*.*",
+                true,
+                AppDomain.CurrentDomain.BaseDirectory,
                 result =>
                 {
                     DownloadOptions.DownloadDirectory = result;

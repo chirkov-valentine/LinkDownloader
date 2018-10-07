@@ -1,24 +1,10 @@
-/*
-  In App.xaml:
-  <Application.Resources>
-      <vm:ViewModelLocator xmlns:vm="clr-namespace:LinkDownLoaderGUI"
-                           x:Key="Locator" />
-  </Application.Resources>
-  
-  In the View:
-  DataContext="{Binding Source={StaticResource Locator}, Path=ViewModelName}"
-
-  You can also use Blend to do all this with the tool's support.
-  See http://www.galasoft.ch/mvvm
-*/
-
 using System;
 using System.IO;
 using CommonServiceLocator;
 using GalaSoft.MvvmLight.Ioc;
 using GalaSoft.MvvmLight.Messaging;
 using LinkDownLoaderGUI.Messages;
-using Microsoft.Win32;
+using System.Windows.Forms;
 
 namespace LinkDownLoaderGUI.ViewModel
 {
@@ -52,10 +38,13 @@ namespace LinkDownLoaderGUI.ViewModel
 
         private void OpenMessageFolderMessageHandler(OpenFolderMessage message)
         {
-            var dialog = new OpenFileDialog { /*Filter = message.Filter*/ };
-            if (dialog.ShowDialog() == true)
+            var dialog = new FolderBrowserDialog();
+            dialog.ShowNewFolderButton = message.ShowNewFolderButton;
+            dialog.SelectedPath = message.StartPath;
+            var result = dialog.ShowDialog();
+            if (result == DialogResult.OK)
             {
-                message.OpenFeedBack?.Invoke(Path.GetDirectoryName(dialog.FileName));
+                message.OpenFeedBack?.Invoke(dialog.SelectedPath);
             }
         }
 

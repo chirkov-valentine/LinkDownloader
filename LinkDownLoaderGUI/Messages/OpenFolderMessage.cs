@@ -8,11 +8,13 @@ namespace LinkDownLoaderGUI.Messages
 {
     public class OpenFolderMessage
     {
-        public string Filter { get; private set; }
+        public bool ShowNewFolderButton { get; private set; }
+        public string StartPath { get; set; }
         public Action<string> OpenFeedBack { get; private set; }
-        public  OpenFolderMessage(string filter, Action<string> openFeedBack)
+        public  OpenFolderMessage(bool showNewFolderButton, string startPath, Action<string> openFeedBack)
         {
-            Filter = filter;
+            ShowNewFolderButton = showNewFolderButton;
+            StartPath = startPath;
             OpenFeedBack = openFeedBack;
         }
     }
