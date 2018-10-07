@@ -170,12 +170,17 @@ namespace LinkDownLoaderGUI.ViewModel
 
             await Task.WhenAll(threadList);
 
+            DispatcherHelper.CheckBeginInvokeOnUI(
+             () =>
+             {
+                 RemainFilesCount = string.Concat("Скачано: "+ FilesProceed + " из " + FilesCount, ". Окончание закачки\n");
+             });
+            Started = false;
         }
 
         private async Task DowloadOneFileAsync(CancellationToken token)
         {
-            FileLink link;
-            _fileLinks.TryDequeue(out link);
+            _fileLinks.TryDequeue(out FileLink link);
             WebClient wc = new WebClient();
 
             if (token.IsCancellationRequested)
