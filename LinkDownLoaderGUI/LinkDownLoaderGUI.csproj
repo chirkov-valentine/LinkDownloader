@@ -97,6 +97,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Messages\OpenFolderMessage.cs" />
     <Compile Include="Model\DownloadOptions.cs" />
     <Compile Include="Model\FileLink.cs" />
     <Compile Include="ViewModel\MainViewModel.cs" />

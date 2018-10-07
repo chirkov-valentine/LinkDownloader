@@ -12,8 +12,13 @@
   See http://www.galasoft.ch/mvvm
 */
 
+using System;
+using System.IO;
 using CommonServiceLocator;
 using GalaSoft.MvvmLight.Ioc;
+using GalaSoft.MvvmLight.Messaging;
+using LinkDownLoaderGUI.Messages;
+using Microsoft.Win32;
 
 namespace LinkDownLoaderGUI.ViewModel
 {
@@ -42,6 +47,16 @@ namespace LinkDownLoaderGUI.ViewModel
             ////}
 
             SimpleIoc.Default.Register<MainViewModel>();
+            Messenger.Default.Register<OpenFolderMessage>(this, (message) => OpenMessageFolderMessageHandler(message));
+        }
+
+        private void OpenMessageFolderMessageHandler(OpenFolderMessage message)
+        {
+            var dialog = new OpenFileDialog { /*Filter = message.Filter*/ };
+            if (dialog.ShowDialog() == true)
+            {
+                message.OpenFeedBack?.Invoke(Path.GetDirectoryName(dialog.FileName));
+            }
         }
 
         public MainViewModel Main

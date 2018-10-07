@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:LinkDownLoaderGUI"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800"
+        Title="Скачиватель файлов с HTML страницы" Height="450" Width="800"
         DataContext="{Binding Main, Source={StaticResource Locator}}">
         <Grid Margin="10 10 10 10">
             <Grid.ColumnDefinitions>
@@ -31,11 +31,17 @@
                      Margin="5"></TextBox>
 
             <Label Grid.Row="1" Grid.Column="0" Content="Сохранить в:"></Label>
-            <TextBox Grid.Row="1" Grid.Column="1" 
+            <DockPanel Grid.Row="1" Grid.Column="1">
+            <Button DockPanel.Dock="Right" 
+                    Content="..." 
+                    Width="25"
+                    Command="{Binding ShowOpenFolderDialogCommand}"></Button>
+                <TextBox 
                      Text="{Binding DownloadOptions.DownloadDirectory}"
                      Margin="5"></TextBox>
+            </DockPanel>
 
-            <Label Grid.Row="2" Grid.Column="0" Content="Маска файлов:"></Label>
+        <Label Grid.Row="2" Grid.Column="0" Content="Маска файлов:"></Label>
             <TextBox Grid.Row="2" Grid.Column="1" 
                      Text="{Binding DownloadOptions.Mask}"
                      Margin="5"></TextBox>
@@ -49,10 +55,12 @@
 
             <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2">
                 <Button Margin="10 10 0 0" 
-                        Command="{Binding GetLinksCommand}">Скачать</Button>
+                        Command="{Binding GetLinksCommand}"
+                        Padding="5">Скачать</Button>
             <Button 
                 Margin="10 10 0 0" 
-                Command="{Binding CancelCommand}">Отмена</Button>
+                Command="{Binding CancelCommand}"
+                Padding="5">Отмена</Button>
         </StackPanel>
 
         <ProgressBar Value="{Binding FilesProceed}" 
@@ -71,7 +79,7 @@
         <TextBox Grid.Row="8" Grid.Column="0" Grid.ColumnSpan="2" 
                  TextWrapping="Wrap"
                  IsReadOnly="True"
-                 HorizontalScrollBarVisibility="Auto"
+                 HorizontalScrollBarVisibility="Visible"
                  Text="{Binding LogText}"></TextBox>
 
         </Grid>

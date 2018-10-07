@@ -1,8 +1,10 @@
 using Flurl;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.Command;
+using GalaSoft.MvvmLight.Messaging;
 using GalaSoft.MvvmLight.Threading;
 using HtmlAgilityPack;
+using LinkDownLoaderGUI.Messages;
 using LinkDownLoaderGUI.Model;
 using System;
 using System.Collections.Concurrent;
@@ -61,8 +63,20 @@ namespace LinkDownLoaderGUI.ViewModel
             set => Set<string>(() => this.RemainFilesCount, ref _remainFileCount, value);
         }
 
+        public bool Started
+        {
+            get => _started;
+            set
+            {
+                Set<bool>(() => this.Started, ref _started, value);
+                GetLinksCommand.RaiseCanExecuteChanged();
+                CancelCommand.RaiseCanExecuteChanged();
+            }
+        }
+
         public RelayCommand GetLinksCommand { get; private set; }
         public RelayCommand CancelCommand { get; private set; }
+        public RelayCommand ShowOpenFolderDialogCommand { get; set; }
 
         public MainViewModel()
         {
@@ -74,31 +88,40 @@ namespace LinkDownLoaderGUI.ViewModel
                 ThreadCount = 5
             };
             _fileLinks = new ConcurrentQueue<FileLink>();
-            _started = false;
             GetLinksCommand = new RelayCommand(
                 () => DownloadFilesAsync(DownloadOptions),
-                () => !_started,
+                () => !Started,
                 true);
             CancelCommand = new RelayCommand(() => CancelDownload(),
-                () => _started,
+                () => Started,
                 true);
+            ShowOpenFolderDialogCommand = new RelayCommand(
+                () => ShowOpenFolderDialog());
+
             DispatcherHelper.Initialize();
+            Started = false;
         }
 
         private void CancelDownload()
         {
             _cts.Cancel();
-            _started = false;
-            GetLinksCommand.RaiseCanExecuteChanged();
-            CancelCommand.RaiseCanExecuteChanged();
+            Started = false;
+        }
+
+        private void ShowOpenFolderDialog()
+        {
+            var message = new OpenFolderMessage(
+                "All files (*.*)|*.*",
+                result =>
+                {
+                    DownloadOptions.DownloadDirectory = result;
+                });
+            Messenger.Default.Send(message);
         }
 
         private async void DownloadFilesAsync(DownloadOptions options)
         {
-            _started = true;
-
-            GetLinksCommand.RaiseCanExecuteChanged();
-            CancelCommand.RaiseCanExecuteChanged();
+            Started = true;
 
             _cts = new CancellationTokenSource();
             _token = _cts.Token;
@@ -176,7 +199,7 @@ namespace LinkDownLoaderGUI.ViewModel
                   LogText = string.Concat(LogText, ex.Message, "\n");
               });
             }
-            
+
             DispatcherHelper.CheckBeginInvokeOnUI(
                () =>
                {
@@ -194,7 +217,7 @@ namespace LinkDownLoaderGUI.ViewModel
         {
             HtmlWeb hw = new HtmlWeb();
             var doc = await hw.LoadFromWebAsync(options.HttpAddress);
-    
+
             foreach (HtmlNode link in doc.DocumentNode.SelectNodes("//a[@href]"))
             {
                 var fileName = Path.GetFileName(link.Attributes["href"].Value);
@@ -203,7 +226,7 @@ namespace LinkDownLoaderGUI.ViewModel
                     : link.Attributes["href"].Value;
 
                 if (FitsMask(fileName, options.Mask))
-                    _fileLinks.Enqueue( new FileLink
+                    _fileLinks.Enqueue(new FileLink
                     {
                         LinkName = linkName,
                         OutputName = fileName,
